@@ -11,6 +11,9 @@ use cosmwasm_std::{
 
 use anyhow::{anyhow, bail, Result as AnyResult};
 
+pub mod context;
+mod entry_points;
+
 /// Interface to call into a Contract
 pub trait Contract<T, Q = Empty>
 where
@@ -53,6 +56,49 @@ type ContractClosure<T, C, E, Q> =
 type PermissionedClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, T) -> Result<Response<C>, E>>;
 type ReplyClosure<C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, Reply) -> Result<Response<C>, E>>;
 type QueryClosure<T, E, Q> = Box<dyn Fn(Deps<Q>, Env, T) -> Result<Binary, E>>;
+
+// Wraps the exported functions from a contract and provides the normalized format
+// pub struct ContractWrapper<ExecuteFn, InstantiateFn, QueryFn, SudoFn, ReplyFn, MigrateFn> {
+//     execute_fn: ExecuteFn,
+//     instantiate_fn: InstantiateFn,
+//     query_fn: QueryFn,
+//     sudo_fn: SudoFn,
+//     reply_fn: ReplyFn,
+//     migrate_fn: MigrateFn,
+// }
+
+// impl<Q, C, ExecuteFnT, InstantiateFnT, QueryFnT, SudoFnT, ReplyFnT, MigrateFnT>
+//     ContractWrapper<ExecuteFnT, InstantiateFnT, QueryFnT, SudoFnT, ReplyFnT, MigrateFnT>
+// where
+//     ExecuteFnT: ContractFn<Q, C>,
+//     InstantiateFnT: ContractFn<Q, C>,
+//     QueryFnT: QueryFn<Q>,
+//     SudoFnT: PermissionedFn<Q, C>,
+//     ReplyFnT: ReplyFn<Q, C>,
+//     MigrateFnT: PermissionedFn<Q, C>,
+// {
+//     pub fn new(
+//         execute_fn: ExecuteFnT,
+//         instantiate_fn: InstantiateFnT,
+//         query_fn: QueryFnT,
+//     ) -> ContractWrapper<
+//         ExecuteFnT,
+//         InstantiateFnT,
+//         QueryFnT,
+//         fn(DepsMut<Q>, Env, MessageInfo, Empty) -> AnyResult<Response<C>>,
+//         fn(DepsMut<Q>, Env, Reply) -> AnyResult<Response<C>>,
+//         fn(DepsMut<Q>, Env, MessageInfo, Empty) -> AnyResult<Response<C>>,
+//     > {
+//         ContractWrapper {
+//             execute_fn,
+//             instantiate_fn,
+//             query_fn,
+//             sudo_fn: default_sudo_fn,
+//             reply_fn: default_reply_fn,
+//             migrate_fn: default_migrate_fn,
+//         }
+//     }
+// }
 
 /// Wraps the exported functions from a contract and provides the normalized format
 /// Place T4 and E4 at the end, as we just want default placeholders for most contracts that don't have sudo
