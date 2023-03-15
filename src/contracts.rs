@@ -12,7 +12,11 @@ use cosmwasm_std::{
 use anyhow::{anyhow, bail, Result as AnyResult};
 
 pub mod context;
+mod contract_wrapper;
 mod entry_points;
+
+// pub use contract_wrapper::ContractWrapper;
+pub use entry_points::wrap;
 
 /// Interface to call into a Contract
 pub trait Contract<T, Q = Empty>
