@@ -8,6 +8,8 @@ use anyhow::{bail, Result as AnyResult};
 use cosmwasm_std::{Binary, CustomQuery, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response};
 use serde::Deserialize;
 
+use super::context::{CustomizeDepsMut, CustomizeResponse};
+
 /// `execute` or `instantiate` entry point
 ///
 /// * `Q` - a blockchain-specific query-type
@@ -26,6 +28,48 @@ where
         info: MessageInfo,
         msg: Self::Msg,
     ) -> AnyResult<Response<C>>;
+}
+
+// It would be preferable for those functions to be provided `ContractFn` trait, but it is impossible due
+// to need of returning `impl ContractFn`.
+fn cast_query<NewQ, F, Q, C>(f: F) -> impl ContractFn<NewQ, C>
+where
+    F: ContractFn<Q, C>,
+    NewQ: CustomQuery,
+    Q: CustomQuery,
+    for<'a> DepsMut<'a, NewQ>: CustomizeDepsMut<'a, Q>,
+{
+    (move |deps: DepsMut<NewQ>, env: Env, info: MessageInfo, msg: F::Msg| {
+        f.call(deps.customize(), env, info, msg)
+    })
+    .wrap()
+}
+
+fn cast_msg<NewC, F, Q, C>(f: F) -> impl ContractFn<Q, NewC>
+where
+    F: ContractFn<Q, C>,
+    Q: CustomQuery,
+    Response<C>: CustomizeResponse<NewC>,
+{
+    (move |deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: F::Msg| {
+        f.call(deps, env, info, msg).map(|resp| resp.customize())
+    })
+    .wrap()
+}
+
+fn cast_fn<NewQ, NewC, F, Q, C>(f: F) -> impl ContractFn<NewQ, NewC>
+where
+    F: ContractFn<Q, C>,
+    Q: CustomQuery,
+    NewQ: CustomQuery,
+    for<'a> DepsMut<'a, NewQ>: CustomizeDepsMut<'a, Q>,
+    Response<C>: CustomizeResponse<NewC>,
+{
+    (move |deps: DepsMut<NewQ>, env: Env, info: MessageInfo, msg: F::Msg| {
+        f.call(deps.customize(), env, info, msg)
+            .map(|resp| resp.customize())
+    })
+    .wrap()
 }
 
 impl<T, Q, C, E> ContractFn<Q, C> for fn(DepsMut<Q>, Env, MessageInfo, T) -> Result<Response<C>, E>
@@ -59,6 +103,45 @@ where
     type Msg: for<'de> Deserialize<'de>;
 
     fn call(&self, deps: DepsMut<Q>, env: Env, msg: Self::Msg) -> AnyResult<Response<C>>;
+}
+
+// It would be preferable for those functions to be provided `PermissionedFn` trait, but it is impossible due
+// to need of returning `impl PermissionedFn`.
+fn cast_permissioned_query<NewQ, F, Q, C>(f: F) -> impl PermissionedFn<NewQ, C>
+where
+    F: PermissionedFn<Q, C>,
+    NewQ: CustomQuery,
+    Q: CustomQuery,
+    for<'a> DepsMut<'a, NewQ>: CustomizeDepsMut<'a, Q>,
+{
+    (move |deps: DepsMut<NewQ>, env: Env, msg: F::Msg| f.call(deps.customize(), env, msg)).wrap()
+}
+
+fn cast_permissioned_msg<NewC, F, Q, C>(f: F) -> impl PermissionedFn<Q, NewC>
+where
+    F: PermissionedFn<Q, C>,
+    Q: CustomQuery,
+    Response<C>: CustomizeResponse<NewC>,
+{
+    (move |deps: DepsMut<Q>, env: Env, msg: F::Msg| {
+        f.call(deps, env, msg).map(|resp| resp.customize())
+    })
+    .wrap()
+}
+
+fn cast_permissioned_fn<NewQ, NewC, F, Q, C>(f: F) -> impl PermissionedFn<NewQ, NewC>
+where
+    F: PermissionedFn<Q, C>,
+    Q: CustomQuery,
+    NewQ: CustomQuery,
+    for<'a> DepsMut<'a, NewQ>: CustomizeDepsMut<'a, Q>,
+    Response<C>: CustomizeResponse<NewC>,
+{
+    (move |deps: DepsMut<NewQ>, env: Env, msg: F::Msg| {
+        f.call(deps.customize(), env, msg)
+            .map(|resp| resp.customize())
+    })
+    .wrap()
 }
 
 impl<T, Q, C, E> PermissionedFn<Q, C> for fn(DepsMut<Q>, Env, T) -> Result<Response<C>, E>
@@ -96,6 +179,43 @@ where
     }
 }
 
+// It would be preferable for those functions to be provided `ReplyFn` trait, but it is impossible due
+// to need of returning `impl ReplyFn`.
+fn cast_reply_query<NewQ, F, Q, C>(f: F) -> impl ReplyFn<NewQ, C>
+where
+    F: ReplyFn<Q, C>,
+    NewQ: CustomQuery,
+    Q: CustomQuery,
+    for<'a> DepsMut<'a, NewQ>: CustomizeDepsMut<'a, Q>,
+{
+    move |deps: DepsMut<NewQ>, env: Env, msg: Reply| f.call(deps.customize(), env, msg)
+}
+
+fn cast_reply_msg<NewC, F, Q, C>(f: F) -> impl ReplyFn<Q, NewC>
+where
+    F: ReplyFn<Q, C>,
+    Q: CustomQuery,
+    Response<C>: CustomizeResponse<NewC>,
+{
+    move |deps: DepsMut<Q>, env: Env, msg: Reply| {
+        f.call(deps, env, msg).map(|resp| resp.customize())
+    }
+}
+
+fn cast_reply_fn<NewQ, NewC, F, Q, C>(f: F) -> impl ReplyFn<NewQ, NewC>
+where
+    F: ReplyFn<Q, C>,
+    Q: CustomQuery,
+    NewQ: CustomQuery,
+    for<'a> DepsMut<'a, NewQ>: CustomizeDepsMut<'a, Q>,
+    Response<C>: CustomizeResponse<NewC>,
+{
+    move |deps: DepsMut<NewQ>, env: Env, msg: Reply| {
+        f.call(deps.customize(), env, msg)
+            .map(|resp| resp.customize())
+    }
+}
+
 /// `query` entry point
 ///
 /// * `Q` - a blockchain-specific query-type
@@ -106,6 +226,18 @@ where
     type Msg: for<'de> Deserialize<'de>;
 
     fn call(&self, deps: Deps<Q>, env: Env, msg: Self::Msg) -> AnyResult<Binary>;
+}
+
+// It would be preferable for those functions to be provided `ReplyFn` trait, but it is impossible due
+// to need of returning `impl ReplyFn`.
+fn cast_query<NewQ, F, Q>(f: F) -> impl QueryFn<NewQ>
+where
+    F: QueryFn<Q>,
+    NewQ: CustomQuery,
+    Q: CustomQuery,
+    for<'a> DepsMut<'a, NewQ>: CustomizeDepsMut<'a, Q>,
+{
+    (move |deps: DepsMut<NewQ>, env: Env, msg: F::Msg| f.call(deps.customize(), env, msg)).wrap()
 }
 
 impl<T, Q, E> QueryFn<Q> for fn(Deps<Q>, Env, T) -> Result<Binary, E>
@@ -196,7 +328,7 @@ impl<T, Msg> WrappableFn<Msg> for T {}
 
 /// Function wrapping a type into `FnWrapper` so there is better type elision or at least nicer
 /// turbofish syntax
-pub fn wrap<Msg, F>(f: F) -> FnWrapper<F, Msg>
+pub fn wap<Msg, F>(f: F) -> FnWrapper<F, Msg>
 where
     F: WrappableFn<Msg>,
 {
