@@ -8,7 +8,7 @@ use anyhow::{bail, Result as AnyResult};
 use cosmwasm_std::{Binary, CustomQuery, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response};
 use serde::Deserialize;
 
-use super::context::{CustomizeDepsMut, CustomizeResponse};
+use super::context::{CustomizeDeps, CustomizeDepsMut, CustomizeResponse};
 
 /// `execute` or `instantiate` entry point
 ///
@@ -32,7 +32,7 @@ where
 
 // It would be preferable for those functions to be provided `ContractFn` trait, but it is impossible due
 // to need of returning `impl ContractFn`.
-fn cast_query<NewQ, F, Q, C>(f: F) -> impl ContractFn<NewQ, C>
+fn cast_fn_query<NewQ, F, Q, C>(f: F) -> impl ContractFn<NewQ, C>
 where
     F: ContractFn<Q, C>,
     NewQ: CustomQuery,
@@ -45,7 +45,7 @@ where
     .wrap()
 }
 
-fn cast_msg<NewC, F, Q, C>(f: F) -> impl ContractFn<Q, NewC>
+fn cast_fn_msg<NewC, F, Q, C>(f: F) -> impl ContractFn<Q, NewC>
 where
     F: ContractFn<Q, C>,
     Q: CustomQuery,
@@ -235,9 +235,9 @@ where
     F: QueryFn<Q>,
     NewQ: CustomQuery,
     Q: CustomQuery,
-    for<'a> DepsMut<'a, NewQ>: CustomizeDepsMut<'a, Q>,
+    for<'a> Deps<'a, NewQ>: CustomizeDeps<'a, Q>,
 {
-    (move |deps: DepsMut<NewQ>, env: Env, msg: F::Msg| f.call(deps.customize(), env, msg)).wrap()
+    (move |deps: Deps<NewQ>, env: Env, msg: F::Msg| f.call(deps.customize(), env, msg)).wrap()
 }
 
 impl<T, Q, E> QueryFn<Q> for fn(Deps<Q>, Env, T) -> Result<Binary, E>
@@ -328,7 +328,7 @@ impl<T, Msg> WrappableFn<Msg> for T {}
 
 /// Function wrapping a type into `FnWrapper` so there is better type elision or at least nicer
 /// turbofish syntax
-pub fn wap<Msg, F>(f: F) -> FnWrapper<F, Msg>
+pub fn wrap<Msg, F>(f: F) -> FnWrapper<F, Msg>
 where
     F: WrappableFn<Msg>,
 {
