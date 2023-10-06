@@ -61,7 +61,7 @@ impl Gov for AcceptingModule {}
 #[test]
 fn default_gov() {
     let mut app = App::default();
-    let code = app.store_code(stargate::contract());
+    let code = app.store_code(Addr::unchecked("creator"), stargate::contract());
     let contract = app
         .instantiate_contract(
             code,
@@ -82,7 +82,7 @@ fn substituting_gov() {
     let mut app = AppBuilder::new()
         .with_gov(AcceptingModule)
         .build(|_, _, _| ());
-    let code = app.store_code(stargate::contract());
+    let code = app.store_code(Addr::unchecked("creator"), stargate::contract());
     let contract = app
         .instantiate_contract(
             code,
