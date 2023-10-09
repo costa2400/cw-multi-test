@@ -29,6 +29,17 @@ impl Module for AcceptingModule {
         Ok(AppResponse::default())
     }
 
+    fn query(
+        &self,
+        _api: &dyn Api,
+        _storage: &dyn Storage,
+        _querier: &dyn Querier,
+        _block: &BlockInfo,
+        _request: Self::QueryT,
+    ) -> AnyResult<Binary> {
+        Ok(Binary::default())
+    }
+
     fn sudo<ExecC, QueryC>(
         &self,
         _api: &dyn Api,
@@ -42,17 +53,6 @@ impl Module for AcceptingModule {
         QueryC: CustomQuery + DeserializeOwned + 'static,
     {
         Ok(AppResponse::default())
-    }
-
-    fn query(
-        &self,
-        _api: &dyn Api,
-        _storage: &dyn Storage,
-        _querier: &dyn Querier,
-        _block: &BlockInfo,
-        _request: Self::QueryT,
-    ) -> AnyResult<Binary> {
-        Ok(Binary::default())
     }
 }
 
