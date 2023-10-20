@@ -45,7 +45,7 @@ fn substituting_ibc() {
 
 #[test]
 fn ibc_accepting_module_works() {
-    let ibc_accepting_module = IbcAcceptingModule {};
+    let ibc_accepting_module = IbcAcceptingModule::new();
     let app = App::default();
     let mut storage = MockStorage::default();
     assert!(ibc_accepting_module
