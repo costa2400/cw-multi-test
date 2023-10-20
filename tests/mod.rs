@@ -14,7 +14,6 @@ use sha2::{Digest, Sha256};
 
 mod test_app_builder;
 mod test_module;
-mod test_stargate;
 mod test_wasm;
 
 const COUNTER: Item<u64> = Item::new("count");
