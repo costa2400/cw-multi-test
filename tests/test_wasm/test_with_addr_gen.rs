@@ -1,7 +1,7 @@
 use crate::test_addresses::MockAddressGenerator;
 use crate::test_api::MockApiBech32;
 use crate::test_contracts;
-use cosmwasm_std::{Addr, Empty};
+use cosmwasm_std::Empty;
 use cw_multi_test::{AppBuilder, Executor, WasmKeeper};
 
 #[test]
@@ -17,10 +17,8 @@ fn contract_address_should_work() {
         .build(|_, _, _| {});
 
     // store contract's code
-    let code_id = app.store_code_with_creator(
-        Addr::unchecked("creator"),
-        test_contracts::counter::contract(),
-    );
+    let creator = app.api().addr_make("creator");
+    let code_id = app.store_code(creator, test_contracts::counter::contract());
 
     let owner = app.api().addr_make("owner");
 
@@ -59,10 +57,9 @@ fn predictable_contract_address_should_work() {
         .with_wasm(wasm_keeper)
         .build(|_, _, _| {});
 
-    let creator = app.api().addr_make("creator");
-
     // store contract's code
-    let code_id = app.store_code_with_creator(creator.clone(), test_contracts::counter::contract());
+    let creator = app.api().addr_make("creator");
+    let code_id = app.store_code(creator.clone(), test_contracts::counter::contract());
 
     let contract_addr_1 = app
         .instantiate2_contract(
@@ -117,10 +114,9 @@ fn creating_contract_with_the_same_predictable_address_should_fail() {
         .with_wasm(wasm_keeper)
         .build(|_, _, _| {});
 
-    let creator = app.api().addr_make("creator");
-
     // store contract's code
-    let code_id = app.store_code_with_creator(creator.clone(), test_contracts::counter::contract());
+    let creator = app.api().addr_make("creator");
+    let code_id = app.store_code(creator.clone(), test_contracts::counter::contract());
 
     // instantiating for the first time should work
     app.instantiate2_contract(
